@@ -24,6 +24,26 @@ class LLM:
             if api_key is None:
                 raise ValueError("DEEPSEEK_API_KEY environment variable is not set")
         self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.model = "deepseek-chat"
+
+    def _stream_chat_completion(self, messages: List[Dict[str, Any]]) -> str:
+        stream = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            stream=True
+        )
+
+        chunks: List[str] = []
+        for event in stream:
+            if not event.choices:
+                continue
+            delta = event.choices[0].delta
+            if delta is None:
+                continue
+            content = getattr(delta, "content", None)
+            if content:
+                chunks.append(content)
+        return "".join(chunks)
 
     def decide_tool(self, user_input: str, tools: List[str]) -> Dict[str, Any]:
         """
@@ -60,8 +80,7 @@ class LLM:
 
         # 调用 OpenAI API
         try:
-            response = self.client.chat.completions.create(
-                model="deepseek-chat",  # DeepSeek 聊天模型
+            content = self._stream_chat_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_input}
@@ -71,8 +90,6 @@ class LLM:
             # 如果 API 调用失败，返回默认值
             print(f"API 调用失败: {e}")
             return {"tool": "chat", "input": user_input}
-
-        content = response.choices[0].message.content
 
         # 解析 JSON 响应
         if content is None:
@@ -111,8 +128,7 @@ class LLM:
 
         # 调用 OpenAI API
         try:
-            response = self.client.chat.completions.create(
-                model="deepseek-chat",  # DeepSeek 聊天模型
+            content = self._stream_chat_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"请摘要以下文档：\n\n{document}"}
@@ -121,8 +137,6 @@ class LLM:
         except Exception as e:
             # 如果 API 调用失败，返回错误信息
             return f"摘要生成失败: {e}"
-
-        content = response.choices[0].message.content
 
         # 返回摘要内容
         return content if content else "无法生成摘要。"
@@ -158,15 +172,10 @@ class LLM:
 
         # 调用 OpenAI API
         try:
-            response = self.client.chat.completions.create(
-                model="deepseek-chat",  # DeepSeek 聊天模型
-                messages=messages
-            )
+            content = self._stream_chat_completion(messages)
         except Exception as e:
             # 如果 API 调用失败，返回错误信息
             return f"聊天失败: {e}"
-
-        content = response.choices[0].message.content
 
         # 返回聊天内容
         return content if content else "无法生成响应。"
