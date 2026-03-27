@@ -3,6 +3,7 @@ from tools.manager import ToolManager
 from tools.calc import CalcTool
 from tools.search import SearchTool
 from tools.time import TimeTool
+from llm import LLM
 
 
 class Agent:
@@ -22,10 +23,13 @@ class Agent:
         self.tool_manager.register(SearchTool())
         self.tool_manager.register(TimeTool())
 
+        # 初始化 LLM
+        self.llm = LLM()
+
     def decide(self, user_input):
         """
         根据用户输入决定使用哪个工具。
-        第一版：用规则代替 LLM，如果输入包含运算符则使用计算工具，否则使用搜索工具。
+        使用 LLM 代替规则来决定工具。
 
         参数:
         user_input (str): 用户的输入字符串。
@@ -33,12 +37,9 @@ class Agent:
         返回:
         tuple: (工具名称, 工具输入)
         """
-        if any(op in user_input for op in ["+", "-", "*", "/"]):
-            return "calc", user_input
-        elif "时间" in user_input or "time" in user_input.lower():
-            return "time", user_input
-        else:
-            return "search", user_input
+        tools = self.tool_manager.list_tools()
+        result = self.llm.decide_tool(user_input, tools)
+        return result['tool'], result['input']
 
     def run(self, user_input):
         """
