@@ -83,6 +83,25 @@ class Agent:
     def _is_math_expression(self, text: str) -> bool:
         return re.fullmatch(r"[0-9\.\+\-\*\/\(\)\s]+", text.strip()) is not None
 
+    def _extract_math_expression(self, user_input: str) -> str:
+        text = user_input.strip()
+        if self._is_math_expression(text):
+            return text
+
+        patterns = [
+            r"^(?:calc|calculate)\s+(.+)$",
+            r"^计算[:：]?\s*(.+)$",
+            r"^帮我计算[:：]?\s*(.+)$"
+        ]
+        for pattern in patterns:
+            match = re.match(pattern, text, flags=re.IGNORECASE)
+            if not match:
+                continue
+            expression = match.group(1).strip()
+            if self._is_math_expression(expression):
+                return expression
+        return ""
+
     def _looks_like_tool_command(self, user_input: str) -> bool:
         text = user_input.strip()
         lower_text = text.lower()
@@ -125,6 +144,13 @@ class Agent:
         """
         # 👉 Step 1: 记录用户输入
         self.memory.add("user", user_input)
+
+        calc_expression = self._extract_math_expression(user_input)
+        if calc_expression:
+            tool_result = self.tool_manager.execute("calc", calc_expression)
+            response = str(tool_result)
+            self.memory.add("assistant", response)
+            return response
 
         # 有活动文档时，普通追问直接走对话，不再重新选工具。
         if self.active_document_path and not self._looks_like_tool_command(user_input):
