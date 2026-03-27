@@ -2,6 +2,7 @@
 from tools.manager import ToolManager
 from tools.calc import CalcTool
 from tools.search import SearchTool
+from tools.time import TimeTool
 
 
 class Agent:
@@ -19,6 +20,7 @@ class Agent:
         # 注册工具
         self.tool_manager.register(CalcTool())
         self.tool_manager.register(SearchTool())
+        self.tool_manager.register(TimeTool())
 
     def decide(self, user_input):
         """
@@ -33,6 +35,8 @@ class Agent:
         """
         if any(op in user_input for op in ["+", "-", "*", "/"]):
             return "calc", user_input
+        elif "时间" in user_input or "time" in user_input.lower():
+            return "time", user_input
         else:
             return "search", user_input
 
