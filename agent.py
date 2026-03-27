@@ -104,7 +104,14 @@ class Agent:
         if not self.active_document_path:
             return ""
         summary = self.active_document_summary or "暂无摘要"
-        return f"文档路径: {self.active_document_path}\n文档摘要: {summary}"
+        content = self.active_document_content.strip()
+        if len(content) > 4000:
+            content = content[:4000] + "\n[文档内容已截断]"
+        return (
+            f"文档路径: {self.active_document_path}\n"
+            f"文档摘要: {summary}\n"
+            f"文档内容:\n{content}"
+        )
 
     def run(self, user_input):
         """
